@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 )
 
@@ -15,6 +17,7 @@ const (
 	requestIDKey key = 0
 )
 
+// New will create a new http.Server instance with a secure configuration
 func New(logger *log.Logger, mux *http.ServeMux, addr string) *http.Server {
 	// minimum tls configuration for a secure golang web server
 	// https://blog.cloudflare.com/exposing-go-on-the-internet/
@@ -85,4 +88,46 @@ func tracing(nextRequestID func() string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// Serve will wrap the call to ListenAndServe in a graceful shutdown handler
+func Serve(logger *log.Logger, svr *http.Server) error {
+	return gracefully(logger, svr, func(s *http.Server) error {
+		return s.ListenAndServe()
+	})
+}
+
+// ServeTLS will wrap the call to ListenAndServeTLS in a graceful shutdown handler
+func ServeTLS(logger *log.Logger, svr *http.Server, certFile, certKey string) error {
+	return gracefully(logger, svr, func(s *http.Server) error {
+		return s.ListenAndServeTLS(certFile, certKey)
+	})
+}
+
+// spawns a routine to wait for a interrupt signal and handle the shutdown gracefully
+func gracefully(logger *log.Logger, svr *http.Server, serve func(*http.Server) error) error {
+	done := make(chan error)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+
+	go func() {
+		<-quit
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		svr.SetKeepAlivesEnabled(false)
+		if err := svr.Shutdown(ctx); err != nil {
+			done <- fmt.Errorf("could not gracefully shutdown the server: %s", err)
+		}
+		done <- nil
+	}()
+
+	err := serve(svr)
+
+	if err != nil && err != http.ErrServerClosed {
+		return fmt.Errorf("could not listen on %s: %v", svr.Addr, err)
+	}
+
+	return <-done
 }
