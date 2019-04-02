@@ -12,12 +12,12 @@ func init() {
 
 func up00001(tx *sql.Tx) error {
 	_, err := tx.Exec(`
-		create table todo (
+		create table todos (
 			id				integer 	primary key autoincrement,
 			content			text		not null,
 			complete		integer		not null,
-			created			integer		not null,
-			completed_on	integer
+			created			timestamp	not null,
+			completed_on	timestamp
 		);
 	`)
 	return err
@@ -25,7 +25,7 @@ func up00001(tx *sql.Tx) error {
 
 func down00001(tx *sql.Tx) error {
 	_, err := tx.Exec(`
-		drop table todo;
+		drop table todos;
 	`)
 	return err
 }

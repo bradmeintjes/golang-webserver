@@ -40,3 +40,12 @@ func CheckEq(t *testing.T, exp, got interface{}, message string) {
 		t.Fail()
 	}
 }
+
+// Check will check if the given value is true
+func Check(t *testing.T, got bool, message string) {
+	if !got {
+		_, file, line, _ := runtime.Caller(1)
+		t.Logf("%s:%d %s\n", file, line, message)
+		t.Fail()
+	}
+}

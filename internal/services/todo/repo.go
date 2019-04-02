@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	insertTodo     = sqlutil.GenerateInsert("todos", &Todo{})
-	updateTodo     = sqlutil.GenerateUpdate("todos", &Todo{})
+	insertTodo     = sqlutil.GenerateInsert("todos", Todo{}, []string{"id"})
+	updateTodo     = sqlutil.GenerateUpdate("todos", Todo{}, []string{})
 	deleteTodo     = "delete from todos where id = ?"
 	selectTodos    = "select * from todos"
 	selectTodoByID = selectTodos + " where id = ?"

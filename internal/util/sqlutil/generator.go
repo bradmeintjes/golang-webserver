@@ -9,8 +9,8 @@ import (
 const sqlxTag = "db"
 
 // GenerateInsert generates a named insert statement from a sqlx tagged struct
-func GenerateInsert(table string, datastruct interface{}) string {
-	fields := fieldsFromStruct(datastruct)
+func GenerateInsert(table string, datastruct interface{}, excl []string) string {
+	fields := fieldsFromStruct(datastruct, excl)
 
 	var builder strings.Builder
 	builder.WriteString("insert into ")
@@ -37,8 +37,8 @@ func GenerateInsert(table string, datastruct interface{}) string {
 }
 
 // GenerateUpdate generates a named update statement from a sqlx tagged struct
-func GenerateUpdate(table string, datastruct interface{}) string {
-	fields := fieldsFromStruct(datastruct)
+func GenerateUpdate(table string, datastruct interface{}, excl []string) string {
+	fields := fieldsFromStruct(datastruct, excl)
 
 	var builder strings.Builder
 	builder.WriteString("update ")
@@ -54,19 +54,19 @@ func GenerateUpdate(table string, datastruct interface{}) string {
 }
 
 // GenerateUpsert generates a named upsert statement from a sqlx tagged struct
-func GenerateUpsert(table, idField string, datastruct interface{}) string {
+func GenerateUpsert(table, idField string, datastruct interface{}, excl []string) string {
 	var builder strings.Builder
-	builder.WriteString(GenerateInsert(table, datastruct))
+	builder.WriteString(GenerateInsert(table, datastruct, excl))
 	builder.WriteString(" on conflict(")
 	builder.WriteString(idField)
 	builder.WriteString(") do ")
-	builder.WriteString(GenerateUpdate("", datastruct))
+	builder.WriteString(GenerateUpdate("", datastruct, excl))
 	return builder.String()
 }
 
 // GenerateSelect generates a select statement from a sqlx tagged struct
-func GenerateSelect(table string, datastruct interface{}) string {
-	fields := fieldsFromStruct(datastruct)
+func GenerateSelect(table string, datastruct interface{}, excl []string) string {
+	fields := fieldsFromStruct(datastruct, excl)
 
 	var builder strings.Builder
 	builder.WriteString("select ")
@@ -85,7 +85,7 @@ func GenerateSelect(table string, datastruct interface{}) string {
 	return builder.String()
 }
 
-func fieldsFromStruct(datastruct interface{}) []string {
+func fieldsFromStruct(datastruct interface{}, excl []string) []string {
 	st := reflect.TypeOf(datastruct)
 	numFields := st.NumField()
 	fields := make([]string, 0, numFields)
@@ -99,7 +99,19 @@ func fieldsFromStruct(datastruct interface{}) []string {
 				name = val
 			}
 		}
-		fields = append(fields, name)
+
+		if !contains(excl, name) {
+			fields = append(fields, name)
+		}
 	}
 	return fields
+}
+
+func contains(arr []string, val string) bool {
+	for _, v := range arr {
+		if v == val {
+			return true
+		}
+	}
+	return false
 }

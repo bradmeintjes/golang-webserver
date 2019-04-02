@@ -23,6 +23,9 @@ func Fixture(file string) (db *sqlx.DB, clean func(), err error) {
 		return
 	}
 
-	db, err = sqlx.Open(driver, file)
+	db, err = New(Config{
+		Driver:  driver,
+		ConnStr: file,
+	})
 	return
 }
